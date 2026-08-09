@@ -1,0 +1,43 @@
+# ============================================================================
+#  Chromium(iOS) 构建参数模板 —— 面向老设备（iOS 10+，arm64，越狱）
+#  工作流会把 __IOS_DEPLOYMENT_TARGET__ 替换成实际的最低 iOS 版本。
+#  本配置刻意关闭代码签名：越狱机用 TrollStore / AltStore / ldid 重签即可。
+# ============================================================================
+
+# ---- 目标平台 ----
+target_os = "ios"
+target_cpu = "arm64"
+target_environment = "device"          # device（真机 IPA）；simulator 仅用于模拟器
+
+# ---- 构建类型 ----
+is_debug = false
+is_component_build = false
+is_official_build = false
+
+# ---- 最低 iOS 版本（由工作流注入）----
+ios_deployment_target = "__IOS_DEPLOYMENT_TARGET__"
+
+# ---- 关闭签名：越狱设备自行重签 ----
+ios_enable_code_signing = false
+
+# ---- 体积 / 编译速度优化 ----
+enable_dsyms = false
+enable_stripping = true
+symbol_level = 0
+blink_symbol_level = 0
+v8_symbol_level = 0
+exclude_unwind_tables = true
+
+# ---- 多媒体编解码器（H.264/AAC 等）----
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+
+# ---- 关闭 Google 账号/同步相关集成（无需 API key，否则编译会要求密钥）----
+use_official_google_api_keys = false
+enable_google_now = false
+
+# ---- 不需要 NaCl ----
+enable_nacl = false
+
+# ---- 不使用 goma / siso（本地自托管 runner 直编）----
+use_goma = false

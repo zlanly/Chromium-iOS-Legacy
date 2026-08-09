@@ -1,0 +1,121 @@
+name: Build Chromium IPA (legacy iOS 10+, arm64)
+
+# ==========================================================================
+#  重要说明（必读）
+#  --------------------------------------------------------------------------
+#  本工作流设计为在你自己的【自托管 macOS runner】上运行。
+#  原因：GitHub 官方托管的 macOS runner 只有约 14GB 磁盘/内存，且单任务
+#  上限 6 小时，而 Chromium 源码+编译需要 30~50GB 磁盘、数小时、较大内存，
+#  在官方 runner 上必然失败。把你的 Mac 注册为自托管 runner 即可免费、稳定地
+#  跑完，并把产物 IPA 自动上传到本次 Actions 的 Artifacts。
+#
+#  触发方式：在仓库 Actions 页面手动 Run workflow（可填 Chromium 版本 / iOS 最低版本）。
+# ==========================================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      chromium_ref:
+        description: "Chromium 版本/提交。默认 M75(75.0.3770.142)，是仍支持 iOS 10 的一代附近。"
+        required: false
+        default: "75.0.3770.142"
+      deployment_target:
+        description: "iOS 最低部署版本（iOS10 设备填 10.0；若只想支持 iOS11/12 可填 11.0/12.0）"
+        required: false
+        default: "10.0"
+
+jobs:
+  build:
+    # 自托管 runner 标签；在你的 Mac 上安装 runner 后请保持标签为 self-hosted + macOS
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 1440   # 最长 24 小时（自托管 runner 允许更长）
+
+    env:
+      CHROMIUM_REF: ${{ github.event.inputs.chromium_ref || '75.0.3770.142' }}
+      IOS_DEPLOYMENT_TARGET: ${{ github.event.inputs.deployment_target || '10.0' }}
+      DEPOT_TOOLS_UPDATE: 0
+
+    steps:
+      - name: Checkout 本仓库（配置 + 脚本）
+        uses: actions/checkout@v4
+        with:
+          path: config-repo
+
+      - name: 安装依赖
+        run: |
+          brew install ninja gnu-sed python3 || true
+          echo "Xcode: $(xcodebuild -version 2>/dev/null | head -1 || echo '未检测到，请安装 Xcode')"
+
+      - name: 克隆 depot_tools
+        run: |
+          rm -rf "${{ github.workspace }}/depot_tools"
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "${{ github.workspace }}/depot_tools"
+
+      - name: 拉取 Chromium(iOS) 源码
+        run: |
+          export PATH="${{ github.workspace }}/depot_tools:$PATH"
+          mkdir -p "${{ github.workspace }}/chromium"
+          cd "${{ github.workspace }}/chromium"
+          fetch --no-history ios
+
+      - name: 切换到指定 Chromium 版本
+        run: |
+          export PATH="${{ github.workspace }}/depot_tools:$PATH"
+          cd "${{ github.workspace }}/chromium/src"
+          git fetch --tags origin
+          git checkout "$CHROMIUM_REF"
+          gclient sync -D --with_branch_heads
+
+      - name: 应用 iOS 10 兼容补丁（patches/ 下，缺失则跳过）
+        run: |
+          export PATH="${{ github.workspace }}/depot_tools:$PATH"
+          cd "${{ github.workspace }}/chromium/src"
+          bash "${{ github.workspace }}/config-repo/config/apply_patches.sh" "${{ github.workspace }}/config-repo/patches"
+
+      - name: 生成构建配置 (gn)
+        run: |
+          export PATH="${{ github.workspace }}/depot_tools:$PATH"
+          cd "${{ github.workspace }}/chromium/src"
+          mkdir -p out/Release-iphoneos
+          CONFIG_ARGS="${{ github.workspace }}/config-repo/config/args.gn" \
+          IOS_DEPLOYMENT_TARGET="$IOS_DEPLOYMENT_TARGET" \
+          python3 - <<'PY'
+          import os, sys
+          t = open(os.environ["CONFIG_ARGS"]).read()
+          t = t.replace("__IOS_DEPLOYMENT_TARGET__", os.environ["IOS_DEPLOYMENT_TARGET"])
+          with open("out/Release-iphoneos/args.gn", "w") as f:
+              f.write(t)
+          print("args.gn 已写入，ios_deployment_target =", os.environ["IOS_DEPLOYMENT_TARGET"])
+          PY
+          gn gen out/Release-iphoneos
+
+      - name: 编译 Chromium (autoninja)
+        run: |
+          export PATH="${{ github.workspace }}/depot_tools:$PATH"
+          cd "${{ github.workspace }}/chromium/src"
+          autoninja -C out/Release-iphoneos chrome
+
+      - name: 打包为未签名 IPA（供越狱设备安装）
+        run: |
+          cd "${{ github.workspace }}/chromium/src/out/Release-iphoneos"
+          rm -rf Payload
+          mkdir -p Payload
+          if [ -d Chromium.app ]; then
+            mv Chromium.app Payload/
+          else
+            echo "未找到 Chromium.app，列出输出目录："
+            ls -la
+            exit 1
+          fi
+          IPA="${{ github.workspace }}/Chromium-${CHROMIUM_REF}-ios${IOS_DEPLOYMENT_TARGET}.ipa"
+          rm -f "$IPA"
+          zip -r -y "$IPA" Payload
+          echo "IPA 已生成: $IPA"
+          ls -lh "$IPA"
+
+      - name: 上传 IPA 到 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Chromium-${{ env.CHROMIUM_REF }}-ios${{ env.IOS_DEPLOYMENT_TARGET }}
+          path: ${{ github.workspace }}/Chromium-${{ env.CHROMIUM_REF }}-ios${{ env.IOS_DEPLOYMENT_TARGET }}.ipa
+          retention-days: 30
