@@ -1,19 +1,30 @@
 name: Probe Runner
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/probe.yml'
 
 jobs:
   probe:
     runs-on: macos-latest
+    permissions:
+      issues: write
     steps:
-      - name: Report environment
+      - name: Collect env and report via issue
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "== sw_vers =="; sw_vers
-          echo "== nproc =="; sysctl -n hw.ncpu
-          echo "== mem GB =="; echo $(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 ))
-          echo "== disk (before cleanup) =="; df -h /
-          echo "== xcode =="; xcodebuild -version 2>/dev/null || true
-          echo "== /Applications size =="; du -sh /Applications 2>/dev/null || true
+          {
+            echo "## Probe Runner 环境实测"
+            echo ""
+            echo '```'
+            echo "== sw_vers =="; sw_vers
+            echo "== nproc =="; sysctl -n hw.ncpu
+            echo "== mem GB =="; echo $(( $(sysctl -n hw.memsize) / 1024 / 1024 / 1024 ))
+            echo "== disk (before cleanup) =="; df -h /
+            echo "== xcode =="; xcodebuild -version 2>/dev/null || true
+            echo "== /Applications size =="; du -sh /Applications 2>/dev/null || true
+            echo '```'
+          } > /tmp/probe.txt
+          cat /tmp/probe.txt
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Probe $(date -u +%Y%m%dT%H%M%SZ)" \
+            --body "$(cat /tmp/probe.txt)"
