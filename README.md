@@ -3,6 +3,10 @@
 把**较新的 Chromium 内核**移植到 **iOS 10+ 的 64 位越狱设备**（iPhone 5s / 6 / 6s / 7 / SE1 等），
 以 **未签名 IPA** 形式交付，可用越狱机上的 TrollStore / AltStore / ldid 安装。
 
+> ✅ **本工程已推送到 GitHub**：[github.com/zlanly/Chromium-iOS-Legacy](https://github.com/zlanly/Chromium-iOS-Legacy)
+> （镜像访问：https://github-com-gh.zilan.ggff.net/zlanly/Chromium-iOS-Legacy）
+> 直接 `git clone` 后按 §3.2 注册自托管 runner 即可，无需再手动推送。
+
 > 本项目改编自社区项目 [`growtopiajaw/Chromium-for-iOS`](https://github.com/growtopiajaw/Chromium-for-iOS)
 > （它原本在 GitHub 的 Mac runner 上把 Chromium 编成 IPA），并按“老设备 + iOS 10 + 越狱”的要求做了改造。
 
@@ -47,14 +51,17 @@
 
 ## 3. 方式 A：GitHub Actions（自托管 runner）
 
-### 3.1 建仓库 + 推送本工程
+### 3.1 仓库已就绪（本工程已推送到 GitHub）
+
+仓库地址：[github.com/zlanly/Chromium-iOS-Legacy](https://github.com/zlanly/Chromium-iOS-Legacy)
+（镜像：https://github-com-gh.zilan.ggff.net/zlanly/Chromium-iOS-Legacy）
+
+在你自己的 Mac 上克隆即可，代码已就绪，直接进入 3.2：
 
 ```bash
-# 在你自己的 Mac 上
-git clone https://github.com/<你的用户名>/Chromium-iOS-Legacy.git
-# 把本交付里的 Chromium-iOS-Legacy/ 下所有文件复制进去，然后：
+git clone https://github.com/zlanly/Chromium-iOS-Legacy.git
 cd Chromium-iOS-Legacy
-git add -A && git commit -m "init legacy chromium ios build" && git push
+# 代码已就绪，直接进入 3.2 注册自托管 runner
 ```
 
 ### 3.2 把你的 Mac 注册为自托管 runner
