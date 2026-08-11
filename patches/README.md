@@ -4,8 +4,8 @@
 
 ## 为什么需要补丁
 
-你选的 Chromium（如 M75，2019 年）当初是用当时版本的 Xcode（Xcode 10/11）编译的。
-若你的 Mac 装的是较新的 Xcode（12+），旧代码可能：
+你选的 Chromium（如 M109，2023 年初）当初是用当时版本的 Xcode（Xcode 14）编译的。
+若你的 Mac 装的是较新的 Xcode（15+），旧代码可能：
 
 - 用到已被新 SDK 删除/重命名的 API；
 - 触发新的编译器告警被当作错误（`-Werror`）；
@@ -20,14 +20,14 @@
 ```bash
 cd chromium/src
 # 改完代码后
-git diff > ../Chromium-iOS-Legacy/patches/fix-ios10-foo.patch
+git diff > ../Chromium-iOS-Legacy/patches/fix-ios12-foo.patch
 ```
 
-## 常见补丁方向（iOS 10 / 老 SDK）
+## 常见补丁方向（iOS 12 / 老 SDK）
 
-- 把 `if (@available(iOS 11, *))` 等 unavailable API 调用加兼容分支或降级实现；
+- 把 `if (@available(iOS 13, *))` 等 unavailable API 调用加兼容分支或降级实现；
 - 移除/替换已废弃的 UIKit/Foundation 符号；
-- 在 `BUILD.gn` 里为 iOS 10 关闭用到新特性的模块；
+- 在 `BUILD.gn` 里为 iOS 12 关闭用到新特性的模块；
 - 给某些 `-Werror` 的第三方库临时放宽告警（不推荐长期，但能先跑通）。
 
-> 提示：把 Chromium ref 固定在与你 Xcode 同代（例如 M75 配 Xcode 10.1–11）能大幅减少补丁量。
+> 提示：把 Chromium ref 固定在与你 Xcode 同代（例如 M109 配 Xcode 14）能大幅减少补丁量。

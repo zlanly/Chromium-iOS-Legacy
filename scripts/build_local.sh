@@ -3,14 +3,14 @@
 #  本地构建脚本（不走 GitHub Actions 也能用）
 #  适用于：你直接在自己的 Mac 上编译，不想配置自托管 runner。
 #  用法：
-#    ./scripts/build_local.sh                       # 默认 M75 + iOS 10.0
-#    ./scripts/build_local.sh 83.0.4103.119 11.0   # 指定版本 + iOS 最低版本
-#  前置：Xcode、brew(install ninja gnu-sed python3)、可访问 googlesource 的网络。
+#    ./scripts/build_local.sh                        # 默认 M109 + iOS 12.0
+#    ./scripts/build_local.sh 109.0.5414.119 12.0   # 指定版本 + iOS 最低版本
+#  前置：Xcode（M109 建议 Xcode 14）、brew(install ninja gnu-sed python3)、可访问 googlesource 的网络。
 # ============================================================================
 set -euo pipefail
 
-CHROMIUM_REF="${1:-75.0.3770.142}"
-IOS_DEPLOYMENT_TARGET="${2:-10.0}"
+CHROMIUM_REF="${1:-109.0.5414.119}"
+IOS_DEPLOYMENT_TARGET="${2:-12.0}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$HOME/chromium-ios-legacy-build"
 

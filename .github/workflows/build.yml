@@ -1,13 +1,15 @@
-name: Build Chromium IPA (legacy iOS 10+, arm64)
+name: Build Chromium IPA (legacy iOS 12+, arm64)
 
 # ==========================================================================
 #  重要说明（必读）
 #  --------------------------------------------------------------------------
 #  本工作流设计为在你自己的【自托管 macOS runner】上运行。
-#  原因：GitHub 官方托管的 macOS runner 只有约 14GB 磁盘/内存，且单任务
-#  上限 6 小时，而 Chromium 源码+编译需要 30~50GB 磁盘、数小时、较大内存，
-#  在官方 runner 上必然失败。把你的 Mac 注册为自托管 runner 即可免费、稳定地
-#  跑完，并把产物 IPA 自动上传到本次 Actions 的 Artifacts。
+#  原因：实测 GitHub 官方托管 macOS runner 为 macOS 26 / Xcode 26 / 3核 / 7GB
+#  内存 / 单任务 6 小时上限。磁盘虽已有 ~97GB 空闲（够用），但 M109 这类
+#  老 Chromium 在 Xcode 26 下基本编不过，且 3核/7GB 链接阶段极易 OOM、
+#  6 小时内冷编完整 Chromium 也跑不完。把你的 Mac 注册为自托管 runner
+#  （配同代 Xcode，如 M109 → Xcode 14）即可免费、稳定地跑完，并把产物
+#  IPA 自动上传到本次 Actions 的 Artifacts。
 #
 #  触发方式：在仓库 Actions 页面手动 Run workflow（可填 Chromium 版本 / iOS 最低版本）。
 # ==========================================================================
@@ -16,13 +18,13 @@ on:
   workflow_dispatch:
     inputs:
       chromium_ref:
-        description: "Chromium 版本/提交。默认 M75(75.0.3770.142)，是仍支持 iOS 10 的一代附近。"
+        description: "Chromium 版本/提交。默认 M109(109.0.5414.119)，是仍支持 iOS 12 的最新一代附近。"
         required: false
-        default: "75.0.3770.142"
+        default: "109.0.5414.119"
       deployment_target:
-        description: "iOS 最低部署版本（iOS10 设备填 10.0；若只想支持 iOS11/12 可填 11.0/12.0）"
+        description: "iOS 最低部署版本（本方案面向 iOS 12+，填 12.0；M114+ 内核需填 13.0 以上）"
         required: false
-        default: "10.0"
+        default: "12.0"
 
 jobs:
   build:
@@ -31,8 +33,8 @@ jobs:
     timeout-minutes: 1440   # 最长 24 小时（自托管 runner 允许更长）
 
     env:
-      CHROMIUM_REF: ${{ github.event.inputs.chromium_ref || '75.0.3770.142' }}
-      IOS_DEPLOYMENT_TARGET: ${{ github.event.inputs.deployment_target || '10.0' }}
+      CHROMIUM_REF: ${{ github.event.inputs.chromium_ref || '109.0.5414.119' }}
+      IOS_DEPLOYMENT_TARGET: ${{ github.event.inputs.deployment_target || '12.0' }}
       DEPOT_TOOLS_UPDATE: 0
 
     steps:
@@ -66,7 +68,7 @@ jobs:
           git checkout "$CHROMIUM_REF"
           gclient sync -D --with_branch_heads
 
-      - name: 应用 iOS 10 兼容补丁（patches/ 下，缺失则跳过）
+      - name: 应用 iOS 12 兼容补丁（patches/ 下，缺失则跳过）
         run: |
           export PATH="${{ github.workspace }}/depot_tools:$PATH"
           cd "${{ github.workspace }}/chromium/src"
